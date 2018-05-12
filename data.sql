@@ -10,4 +10,4 @@ reg_date TIMESTAMP
 INSERT INTO user_test1
 (username, password)
 VALUES
-('pekka', '$2a$12$gETxBxBoqBqw.sc2zeinxuIHtINjASr0Ws.jHYjZDrB7NApMhsbCe');
+('user', '$2y$10$lb9VV9kPIYYDyVcKgB.iwe28igPF7Icbj0qavJ5oFaK1CZsrpw.Ku');
