@@ -13,15 +13,26 @@ if (isset($_POST['username']) && isset($_POST['password'])){
 	$password = $_POST['password'];
 	$link = mysqli_connect("localhost", "root", "asdf", "test");
 	if ($link) {
-		$stmt = mysqli_prepare($link, "SELECT password FROM user_test1 WHERE username=?");
+		$stmt = mysqli_prepare($link, "SELECT password, id FROM user_test1 WHERE username=?");
 		mysqli_stmt_bind_param($stmt, "s", $username);
 		mysqli_stmt_execute($stmt);
-		mysqli_stmt_bind_result($stmt, $passwordFromDB);
+		mysqli_stmt_bind_result($stmt, $passwordFromDB, $idFromDB);
 		mysqli_stmt_fetch($stmt);
 		mysqli_stmt_close($stmt);
 		if (password_verify($password, $passwordFromDB)) {
 			$_SESSION['loggedin'] = TRUE;
 			$_SESSION['secretnumber'] = sprintf("%09d", rand(0, 999999999));
+			// persistent login
+			$hash = base64_encode(random_bytes(30));
+			$expires = time() + (86400 * 3650);
+			$expiresSQL = date('Y-m-d G:i:s', $expires);
+			$_SESSION['secretnumber'] = sprintf("%09d", rand(0, 999999999));
+			setcookie('remember-me', $hash, $expires, "/");
+			$clientIP = include 'getIP.php';
+			$stmt = mysqli_prepare($link, "INSERT INTO persistent_logins1 (hash, user_id, ip, expires) VALUES (?, ?, ?, ?)");
+			mysqli_stmt_bind_param($stmt, "siss", $hash, $idFromDB, $clientIP, $expiresSQL);
+			mysqli_stmt_execute($stmt);
+			mysqli_stmt_close($stmt);
 		} else {
 			$message = "Wrong username and password!";
 		}
@@ -35,6 +46,10 @@ if (isset($_SESSION['loggedin'])){
 if (isset($_SESSION['loggedout'])) {
 	$message = "You have been logged out.";
 	unset ( $_SESSION ['loggedout'] );
+}
+if (!isset($_SESSION['fromIndex']) && isset($_COOKIE['remember-me'])) {
+	header("location: .");
+	exit ();
 }
 ?>
 <!doctype html>

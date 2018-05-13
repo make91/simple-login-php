@@ -1,9 +1,52 @@
 <?php
 session_start();
+unset ( $_SESSION['fromIndex'] );
 if (!isset($_SESSION['loggedin'])){
-	header ( "location: login.php" );
-	exit ();
+	if (isset($_COOKIE['remember-me'])) {
+		$hash = $_COOKIE['remember-me'];
+		$link = mysqli_connect("localhost", "root", "asdf", "test");
+		if ($link) {
+			$stmt = mysqli_prepare($link, "SELECT hash, user_id, ip FROM persistent_logins1 WHERE hash=?");
+			mysqli_stmt_bind_param($stmt, "s", $_COOKIE['remember-me']);
+			mysqli_stmt_execute($stmt);
+			mysqli_stmt_bind_result($stmt, $hashFromDB, $useridFromDB, $ipFromDB);
+			mysqli_stmt_fetch($stmt);
+			mysqli_stmt_close($stmt);
+			$clientIP = include 'getIP.php';
+			if ($hash == $hashFromDB && $clientIP == $ipFromDB) {
+				$stmt = mysqli_prepare($link, "SELECT username FROM user_test1 WHERE id=?");
+				mysqli_stmt_bind_param($stmt, "i", $useridFromDB);
+				mysqli_stmt_execute($stmt);
+				mysqli_stmt_bind_result($stmt, $usernameFromDB);
+				mysqli_stmt_fetch($stmt);
+				mysqli_stmt_close($stmt);
+				$_SESSION['loggedin'] = TRUE;
+				$_SESSION['secretnumber'] = sprintf("%09d", rand(0, 999999999));
+				$_SESSION['username'] = $usernameFromDB;
+			} else {
+				$_SESSION['fromIndex'] = TRUE;
+				header ( "location: login.php" );
+				exit ();
+			}
+		}
+		mysqli_close($link);
+	} else {
+		header ( "location: login.php" );
+		exit ();
+	}
 } else if (isset($_POST["logoutButton"])) {
+	if (isset($_COOKIE['remember-me'])) {
+		$link = mysqli_connect("localhost", "root", "asdf", "test");
+		if ($link) {
+			$stmt = mysqli_prepare($link, "DELETE FROM persistent_logins1 WHERE hash=?");
+			mysqli_stmt_bind_param($stmt, "s", $_COOKIE['remember-me']);
+			mysqli_stmt_execute($stmt);
+			mysqli_stmt_close($stmt);
+		}
+		mysqli_close($link);
+		unset($_COOKIE['remember-me']);
+		setcookie('remember-me', null, -1, '/');
+	}
 	unset ( $_SESSION ['username'] );
 	unset ( $_SESSION ['loggedin'] );
 	unset ( $_SESSION ['secretnumber'] );
